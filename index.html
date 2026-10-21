@@ -2,26 +2,39 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>バレーボール ローテーション＆メンバー管理</title>
-    <!-- Tailwind CSS for sleek responsive layout -->
+    <!-- iOS / PWA Fullscreen Meta Tags -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="バレーローテ">
+    
+    <!-- PWA Web App Manifest data inline via Blob URL in JS or dynamic fallback -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    
     <style>
+        * {
+            box-sizing: border-box;
+            touch-action: manipulation;
+        }
         body {
             font-family: 'Inter', sans-serif;
             user-select: none;
             -webkit-user-select: none;
-            touch-action: manipulation;
+            /* Adaptive full-screen height handling for iOS Safari toolbar dynamic height */
+            height: 100vh;
+            height: 100dvh;
+            overflow: hidden;
         }
         
-        /* Custom styles for tactile feedback and sport styling */
+        /* Court hardwood graphics styling */
         .court-bg {
-            background-color: #d97706; /* Volleyball hardwood coat style */
-            background-image: linear-gradient(135deg, rgba(255,255,255,0.05) 25%, transparent 25%), 
-                              linear-gradient(225deg, rgba(255,255,255,0.05) 25%, transparent 25%), 
-                              linear-gradient(45deg, rgba(255,255,255,0.05) 25%, transparent 25%), 
-                              linear-gradient(315deg, rgba(255,255,255,0.05) 25%, transparent 25%);
+            background-color: #d97706;
+            background-image: linear-gradient(135deg, rgba(255,255,255,0.06) 25%, transparent 25%), 
+                              linear-gradient(225deg, rgba(255,255,255,0.06) 25%, transparent 25%), 
+                              linear-gradient(45deg, rgba(255,255,255,0.06) 25%, transparent 25%), 
+                              linear-gradient(315deg, rgba(255,255,255,0.06) 25%, transparent 25%);
             background-size: 20px 20px;
         }
 
@@ -34,204 +47,196 @@
                 #ffffff 20px
             );
         }
-
-        .slot-selected {
-            ring: 4px solid #3b82f6;
-            animation: pulse-ring 1.5s infinite;
-        }
-
-        @keyframes pulse-ring {
-            0% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7); }
-            70% { box-shadow: 0 0 0 10px rgba(59, 130, 246, 0); }
-            100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0); }
-        }
     </style>
 </head>
-<body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col justify-between p-3 md:p-6 overflow-hidden">
+<body class="bg-slate-900 text-slate-100 flex flex-col justify-between p-2 md:p-4">
 
-    <!-- Application Header -->
-    <header class="flex justify-between items-center bg-slate-800 rounded-xl px-4 py-3 mb-3 shadow-lg border border-slate-700">
-        <div>
-            <h1 class="text-lg md:text-2xl font-bold text-amber-400 flex items-center gap-2">
+    <!-- Compact Header -->
+    <header class="flex justify-between items-center bg-slate-800/90 rounded-xl px-3 py-2 mb-2 shadow-md border border-slate-700/60 shrink-0">
+        <div class="flex items-center gap-2">
+            <h1 class="text-sm md:text-xl font-bold text-amber-400 flex items-center gap-1.5">
                 🏐 バレーボール ローテーションボード
             </h1>
-            <p class="text-xs text-slate-400 hidden sm:block">iPad対応 / タップで入力 & ボタン操作で即座にローテーション</p>
+            <span class="text-[10px] text-slate-400 hidden sm:inline">(オフライン対応)</span>
         </div>
-        <div id="status-badge" class="text-xs font-semibold px-3 py-1.5 rounded-full bg-slate-700 text-slate-300 transition-all">
+        <div id="status-badge" class="text-xs font-semibold px-2.5 py-1 rounded-full bg-slate-700 text-slate-300 transition-all">
             通常モード
         </div>
     </header>
 
-    <!-- Main Interactive Area -->
-    <main class="flex-1 grid grid-cols-12 gap-3 md:gap-6 items-stretch my-auto">
+    <!-- Main Interactive Responsive Container -->
+    <main class="flex-1 grid grid-cols-12 gap-2 md:gap-4 items-stretch min-h-0 overflow-hidden">
         
-        <!-- Left / Center: Volleyball Court & Bench Area (9 cols) -->
-        <div class="col-span-9 flex flex-col justify-between gap-4">
+        <!-- Left Section: Court & Bench Area (9 Columns) -->
+        <div class="col-span-9 flex flex-col justify-between gap-2 h-full overflow-hidden">
             
-            <!-- Volleyball Half Court -->
-            <div class="relative flex-1 court-bg border-4 border-white rounded-2xl shadow-2xl p-4 flex flex-col justify-between overflow-hidden min-h-[360px] md:min-h-[460px]">
+            <!-- Volleyball Half Court (Dynamic Sizing to Prevent Cutoff) -->
+            <div class="relative flex-1 court-bg border-2 md:border-4 border-white rounded-2xl shadow-xl p-2 md:p-4 flex flex-col justify-between overflow-hidden min-h-0">
                 
-                <!-- Net (Top Boundary of Half Court) -->
-                <div class="absolute top-0 left-0 right-0 h-4 net-line shadow-md border-b-2 border-slate-900 flex items-center justify-center">
-                    <span class="bg-blue-900 text-white text-[10px] md:text-xs font-bold px-3 py-0.5 rounded-full tracking-wider shadow">NET (ネット)</span>
+                <!-- Net Line -->
+                <div class="absolute top-0 left-0 right-0 h-3 md:h-4 net-line shadow-md border-b border-slate-900 flex items-center justify-center">
+                    <span class="bg-blue-900 text-white text-[9px] md:text-xs font-bold px-2 py-0.5 rounded-full tracking-wider shadow">NET (ネット)</span>
                 </div>
 
                 <!-- Attack Line (3m Line) -->
-                <div class="absolute top-[35%] left-0 right-0 border-b-4 border-dashed border-white/80 pointer-events-none"></div>
-                <div class="absolute top-[36%] right-2 text-[10px] md:text-xs text-white/70 font-semibold pointer-events-none">アタックライン</div>
+                <div class="absolute top-[35%] left-0 right-0 border-b-2 md:border-b-4 border-dashed border-white/70 pointer-events-none"></div>
+                <div class="absolute top-[36%] right-2 text-[9px] md:text-xs text-white/70 font-semibold pointer-events-none">アタックライン</div>
 
-                <!-- Front Row (Front-Left, Front-Center, Front-Right) -->
-                <!-- Position slots mapped logically to classic rotation array -->
-                <div class="grid grid-cols-3 gap-2 md:gap-4 mt-6 z-10 flex-1 items-center">
-                    <!-- Position 4: Front-Left (C3 in Excel grid logic) -->
-                    <div id="slot-c3" onclick="handleSlotClick('c3')" class="court-slot bg-slate-900/80 hover:bg-slate-800/90 border-2 border-amber-400/80 rounded-xl p-2 md:p-3 flex flex-col items-center justify-center cursor-pointer transition-all h-24 md:h-32 shadow-lg hover:scale-[1.02] active:scale-95">
-                        <span class="text-[10px] md:text-xs text-amber-300 font-bold mb-1">4 / レフト</span>
-                        <span id="name-c3" class="text-sm md:text-xl font-bold text-white text-center break-all line-clamp-2">選手4</span>
+                <!-- Front Row Slots -->
+                <div class="grid grid-cols-3 gap-1.5 md:gap-3 mt-4 z-10 flex-1 items-stretch">
+                    <!-- Position 4: Front-Left (C3) -->
+                    <div id="slot-c3" onclick="handleSlotClick('c3')" class="court-slot bg-slate-900/85 hover:bg-slate-800 border-2 border-amber-400/80 rounded-xl p-1.5 md:p-2 flex flex-col items-center justify-center cursor-pointer transition-all shadow-md active:scale-95">
+                        <span class="text-[9px] md:text-xs text-amber-300 font-bold">4 / レフト</span>
+                        <span id="name-c3" class="text-xs md:text-lg font-bold text-white text-center break-all line-clamp-2">選手4</span>
                     </div>
 
-                    <!-- Position 3: Front-Center (E3 in Excel grid logic) -->
-                    <div id="slot-e3" onclick="handleSlotClick('e3')" class="court-slot bg-slate-900/80 hover:bg-slate-800/90 border-2 border-amber-400/80 rounded-xl p-2 md:p-3 flex flex-col items-center justify-center cursor-pointer transition-all h-24 md:h-32 shadow-lg hover:scale-[1.02] active:scale-95">
-                        <span class="text-[10px] md:text-xs text-amber-300 font-bold mb-1">3 / センター</span>
-                        <span id="name-e3" class="text-sm md:text-xl font-bold text-white text-center break-all line-clamp-2">選手3</span>
+                    <!-- Position 3: Front-Center (E3) -->
+                    <div id="slot-e3" onclick="handleSlotClick('e3')" class="court-slot bg-slate-900/85 hover:bg-slate-800 border-2 border-amber-400/80 rounded-xl p-1.5 md:p-2 flex flex-col items-center justify-center cursor-pointer transition-all shadow-md active:scale-95">
+                        <span class="text-[9px] md:text-xs text-amber-300 font-bold">3 / センター</span>
+                        <span id="name-e3" class="text-xs md:text-lg font-bold text-white text-center break-all line-clamp-2">選手3</span>
                     </div>
 
-                    <!-- Position 2: Front-Right (G3 in Excel grid logic) -->
-                    <div id="slot-g3" onclick="handleSlotClick('g3')" class="court-slot bg-slate-900/80 hover:bg-slate-800/90 border-2 border-amber-400/80 rounded-xl p-2 md:p-3 flex flex-col items-center justify-center cursor-pointer transition-all h-24 md:h-32 shadow-lg hover:scale-[1.02] active:scale-95">
-                        <span class="text-[10px] md:text-xs text-amber-300 font-bold mb-1">2 / ライト</span>
-                        <span id="name-g3" class="text-sm md:text-xl font-bold text-white text-center break-all line-clamp-2">選手2</span>
+                    <!-- Position 2: Front-Right (G3) -->
+                    <div id="slot-g3" onclick="handleSlotClick('g3')" class="court-slot bg-slate-900/85 hover:bg-slate-800 border-2 border-amber-400/80 rounded-xl p-1.5 md:p-2 flex flex-col items-center justify-center cursor-pointer transition-all shadow-md active:scale-95">
+                        <span class="text-[9px] md:text-xs text-amber-300 font-bold">2 / ライト</span>
+                        <span id="name-g3" class="text-xs md:text-lg font-bold text-white text-center break-all line-clamp-2">選手2</span>
                     </div>
                 </div>
 
-                <!-- Back Row (Back-Left, Back-Center, Back-Right) -->
-                <div class="grid grid-cols-3 gap-2 md:gap-4 z-10 flex-1 items-center mt-2">
-                    <!-- Position 5: Back-Left (C7 in Excel grid logic) -->
-                    <div id="slot-c7" onclick="handleSlotClick('c7')" class="court-slot bg-slate-900/80 hover:bg-slate-800/90 border-2 border-amber-400/80 rounded-xl p-2 md:p-3 flex flex-col items-center justify-center cursor-pointer transition-all h-24 md:h-32 shadow-lg hover:scale-[1.02] active:scale-95">
-                        <span class="text-[10px] md:text-xs text-amber-300 font-bold mb-1">5 / バックレフト</span>
-                        <span id="name-c7" class="text-sm md:text-xl font-bold text-white text-center break-all line-clamp-2">選手5</span>
+                <!-- Back Row Slots -->
+                <div class="grid grid-cols-3 gap-1.5 md:gap-3 z-10 flex-1 items-stretch mt-1.5 md:mt-2">
+                    <!-- Position 5: Back-Left (C7) -->
+                    <div id="slot-c7" onclick="handleSlotClick('c7')" class="court-slot bg-slate-900/85 hover:bg-slate-800 border-2 border-amber-400/80 rounded-xl p-1.5 md:p-2 flex flex-col items-center justify-center cursor-pointer transition-all shadow-md active:scale-95">
+                        <span class="text-[9px] md:text-xs text-amber-300 font-bold">5 / バックレフト</span>
+                        <span id="name-c7" class="text-xs md:text-lg font-bold text-white text-center break-all line-clamp-2">選手5</span>
                     </div>
 
-                    <!-- Position 6: Back-Center (E7 in Excel grid logic) -->
-                    <div id="slot-e7" onclick="handleSlotClick('e7')" class="court-slot bg-slate-900/80 hover:bg-slate-800/90 border-2 border-amber-400/80 rounded-xl p-2 md:p-3 flex flex-col items-center justify-center cursor-pointer transition-all h-24 md:h-32 shadow-lg hover:scale-[1.02] active:scale-95">
-                        <span class="text-[10px] md:text-xs text-amber-300 font-bold mb-1">6 / バックセンター</span>
-                        <span id="name-e7" class="text-sm md:text-xl font-bold text-white text-center break-all line-clamp-2">選手6</span>
+                    <!-- Position 6: Back-Center (E7) -->
+                    <div id="slot-e7" onclick="handleSlotClick('e7')" class="court-slot bg-slate-900/85 hover:bg-slate-800 border-2 border-amber-400/80 rounded-xl p-1.5 md:p-2 flex flex-col items-center justify-center cursor-pointer transition-all shadow-md active:scale-95">
+                        <span class="text-[9px] md:text-xs text-amber-300 font-bold">6 / バックセンター</span>
+                        <span id="name-e7" class="text-xs md:text-lg font-bold text-white text-center break-all line-clamp-2">選手6</span>
                     </div>
 
-                    <!-- Position 1: Back-Right (G7 in Excel grid logic) -->
-                    <div id="slot-g7" onclick="handleSlotClick('g7')" class="court-slot bg-slate-900/80 hover:bg-slate-800/90 border-2 border-amber-400/80 rounded-xl p-2 md:p-3 flex flex-col items-center justify-center cursor-pointer transition-all h-24 md:h-32 shadow-lg hover:scale-[1.02] active:scale-95">
-                        <span class="text-[10px] md:text-xs text-amber-300 font-bold mb-1">1 / サーブ (バックライト)</span>
-                        <span id="name-g7" class="text-sm md:text-xl font-bold text-white text-center break-all line-clamp-2">選手1</span>
+                    <!-- Position 1: Back-Right (G7) -->
+                    <div id="slot-g7" onclick="handleSlotClick('g7')" class="court-slot bg-slate-900/85 hover:bg-slate-800 border-2 border-amber-400/80 rounded-xl p-1.5 md:p-2 flex flex-col items-center justify-center cursor-pointer transition-all shadow-md active:scale-95">
+                        <span class="text-[9px] md:text-xs text-amber-300 font-bold">1 / サーブ (バックライト)</span>
+                        <span id="name-g7" class="text-xs md:text-lg font-bold text-white text-center break-all line-clamp-2">選手1</span>
                     </div>
                 </div>
 
             </div>
 
-            <!-- Bench / Reserve Players Section (4 Slots) -->
-            <div class="bg-slate-800 rounded-xl p-3 border border-slate-700 shadow-md">
-                <div class="text-xs font-semibold text-slate-400 mb-2 flex items-center gap-1">
+            <!-- Bench / Reserve Players Section (Guaranteed visible) -->
+            <div class="bg-slate-800/90 rounded-xl p-2 md:p-3 border border-slate-700 shadow-md shrink-0">
+                <div class="text-[11px] md:text-xs font-semibold text-slate-400 mb-1 flex items-center gap-1">
                     👥 控え選手 (サブ 4名)
                 </div>
-                <div class="grid grid-cols-4 gap-2">
-                    <div id="slot-sub1" onclick="handleSlotClick('sub1')" class="court-slot bg-slate-700/80 hover:bg-slate-700 border border-slate-500/50 rounded-lg p-2 flex flex-col items-center justify-center cursor-pointer transition-all h-16 md:h-20 shadow hover:scale-[1.02] active:scale-95">
-                        <span class="text-[9px] md:text-[10px] text-slate-400 mb-0.5">控え 1</span>
-                        <span id="name-sub1" class="text-xs md:text-base font-medium text-slate-200 text-center break-all line-clamp-1">控え1</span>
+                <div class="grid grid-cols-4 gap-1.5 md:gap-2">
+                    <div id="slot-sub1" onclick="handleSlotClick('sub1')" class="court-slot bg-slate-700/80 hover:bg-slate-700 border border-slate-500/50 rounded-lg p-1.5 md:p-2 flex flex-col items-center justify-center cursor-pointer transition-all shadow h-12 md:h-16 active:scale-95">
+                        <span class="text-[8px] md:text-[10px] text-slate-400">控え 1</span>
+                        <span id="name-sub1" class="text-xs md:text-sm font-medium text-slate-200 text-center break-all line-clamp-1">控え1</span>
                     </div>
-                    <div id="slot-sub2" onclick="handleSlotClick('sub2')" class="court-slot bg-slate-700/80 hover:bg-slate-700 border border-slate-500/50 rounded-lg p-2 flex flex-col items-center justify-center cursor-pointer transition-all h-16 md:h-20 shadow hover:scale-[1.02] active:scale-95">
-                        <span class="text-[9px] md:text-[10px] text-slate-400 mb-0.5">控え 2</span>
-                        <span id="name-sub2" class="text-xs md:text-base font-medium text-slate-200 text-center break-all line-clamp-1">控え2</span>
+                    <div id="slot-sub2" onclick="handleSlotClick('sub2')" class="court-slot bg-slate-700/80 hover:bg-slate-700 border border-slate-500/50 rounded-lg p-1.5 md:p-2 flex flex-col items-center justify-center cursor-pointer transition-all shadow h-12 md:h-16 active:scale-95">
+                        <span class="text-[8px] md:text-[10px] text-slate-400">控え 2</span>
+                        <span id="name-sub2" class="text-xs md:text-sm font-medium text-slate-200 text-center break-all line-clamp-1">控え2</span>
                     </div>
-                    <div id="slot-sub3" onclick="handleSlotClick('sub3')" class="court-slot bg-slate-700/80 hover:bg-slate-700 border border-slate-500/50 rounded-lg p-2 flex flex-col items-center justify-center cursor-pointer transition-all h-16 md:h-20 shadow hover:scale-[1.02] active:scale-95">
-                        <span class="text-[9px] md:text-[10px] text-slate-400 mb-0.5">控え 3</span>
-                        <span id="name-sub3" class="text-xs md:text-base font-medium text-slate-200 text-center break-all line-clamp-1">控え3</span>
+                    <div id="slot-sub3" onclick="handleSlotClick('sub3')" class="court-slot bg-slate-700/80 hover:bg-slate-700 border border-slate-500/50 rounded-lg p-1.5 md:p-2 flex flex-col items-center justify-center cursor-pointer transition-all shadow h-12 md:h-16 active:scale-95">
+                        <span class="text-[8px] md:text-[10px] text-slate-400">控え 3</span>
+                        <span id="name-sub3" class="text-xs md:text-sm font-medium text-slate-200 text-center break-all line-clamp-1">控え3</span>
                     </div>
-                    <div id="slot-sub4" onclick="handleSlotClick('sub4')" class="court-slot bg-slate-700/80 hover:bg-slate-700 border border-slate-500/50 rounded-lg p-2 flex flex-col items-center justify-center cursor-pointer transition-all h-16 md:h-20 shadow hover:scale-[1.02] active:scale-95">
-                        <span class="text-[9px] md:text-[10px] text-slate-400 mb-0.5">控え 4</span>
-                        <span id="name-sub4" class="text-xs md:text-base font-medium text-slate-200 text-center break-all line-clamp-1">控え4</span>
+                    <div id="slot-sub4" onclick="handleSlotClick('sub4')" class="court-slot bg-slate-700/80 hover:bg-slate-700 border border-slate-500/50 rounded-lg p-1.5 md:p-2 flex flex-col items-center justify-center cursor-pointer transition-all shadow h-12 md:h-16 active:scale-95">
+                        <span class="text-[8px] md:text-[10px] text-slate-400">控え 4</span>
+                        <span id="name-sub4" class="text-xs md:text-sm font-medium text-slate-200 text-center break-all line-clamp-1">控え4</span>
                     </div>
                 </div>
             </div>
 
         </div>
 
-        <!-- Right Control Panel: 3 Action Buttons (3 cols) -->
-        <div class="col-span-3 flex flex-col gap-3 justify-center">
+        <!-- Right Control Panel: 3 Action Buttons (3 Columns) -->
+        <div class="col-span-3 flex flex-col gap-2 md:gap-3 justify-center">
             
             <!-- Button 1: Clockwise Rotation -->
-            <button onclick="rotateClockwise()" class="flex-1 bg-gradient-to-br from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white rounded-2xl p-3 md:p-4 shadow-xl flex flex-col items-center justify-center gap-2 border-2 border-emerald-300/40 active:scale-95 transition-all">
-                <svg class="w-8 h-8 md:w-12 md:h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <button onclick="rotateClockwise()" class="flex-1 bg-gradient-to-br from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white rounded-xl md:rounded-2xl p-2 md:p-4 shadow-lg flex flex-col items-center justify-center gap-1 border-2 border-emerald-300/40 active:scale-95 transition-all">
+                <svg class="w-6 h-6 md:w-10 md:h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
                 </svg>
-                <span class="font-bold text-sm md:text-xl text-center leading-tight">ローテーション<br><span class="text-xs md:text-sm font-normal opacity-90">(時計回り)</span></span>
+                <span class="font-bold text-xs md:text-lg text-center leading-tight">ローテーション<br><span class="text-[10px] md:text-xs font-normal opacity-90">(時計回り)</span></span>
             </button>
 
-            <!-- Button 2: Counter-Clockwise Rotation (Back) -->
-            <button onclick="rotateCounterClockwise()" class="flex-1 bg-gradient-to-br from-blue-600 to-indigo-700 hover:from-blue-500 hover:to-indigo-600 text-white rounded-2xl p-3 md:p-4 shadow-xl flex flex-col items-center justify-center gap-2 border-2 border-blue-400/40 active:scale-95 transition-all">
-                <svg class="w-8 h-8 md:w-12 md:h-12 transform -scale-x-100" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <!-- Button 2: Counter-Clockwise Rotation -->
+            <button onclick="rotateCounterClockwise()" class="flex-1 bg-gradient-to-br from-blue-600 to-indigo-700 hover:from-blue-500 hover:to-indigo-600 text-white rounded-xl md:rounded-2xl p-2 md:p-4 shadow-lg flex flex-col items-center justify-center gap-1 border-2 border-blue-400/40 active:scale-95 transition-all">
+                <svg class="w-6 h-6 md:w-10 md:h-10 transform -scale-x-100" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
                 </svg>
-                <span class="font-bold text-sm md:text-xl text-center leading-tight">1つ戻す<br><span class="text-xs md:text-sm font-normal opacity-90">(反時計回り)</span></span>
+                <span class="font-bold text-xs md:text-lg text-center leading-tight">1つ戻す<br><span class="text-[10px] md:text-xs font-normal opacity-90">(反時計回り)</span></span>
             </button>
 
             <!-- Button 3: Member Swap / Substitution -->
-            <button id="swap-mode-btn" onclick="toggleSwapMode()" class="flex-1 bg-gradient-to-br from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-white rounded-2xl p-3 md:p-4 shadow-xl flex flex-col items-center justify-center gap-2 border-2 border-amber-300/40 active:scale-95 transition-all">
-                <svg class="w-8 h-8 md:w-12 md:h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <button id="swap-mode-btn" onclick="toggleSwapMode()" class="flex-1 bg-gradient-to-br from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-white rounded-xl md:rounded-2xl p-2 md:p-4 shadow-lg flex flex-col items-center justify-center gap-1 border-2 border-amber-300/40 active:scale-95 transition-all">
+                <svg class="w-6 h-6 md:w-10 md:h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path>
                 </svg>
-                <span class="font-bold text-sm md:text-xl text-center leading-tight">メンバー交代<br><span class="text-xs md:text-sm font-normal opacity-90">(2名選択)</span></span>
+                <span class="font-bold text-xs md:text-lg text-center leading-tight">メンバー交代<br><span class="text-[10px] md:text-xs font-normal opacity-90">(2名選択)</span></span>
             </button>
 
         </div>
 
     </main>
 
-    <!-- Name Input Custom Modal (Avoids browser alert/prompt) -->
+    <!-- Name Input Custom Modal -->
     <div id="name-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
-        <div class="bg-slate-800 border border-slate-700 rounded-2xl p-6 max-w-sm w-full shadow-2xl space-y-4">
-            <h3 class="text-lg font-bold text-white flex items-center gap-2">
+        <div class="bg-slate-800 border border-slate-700 rounded-2xl p-5 max-w-sm w-full shadow-2xl space-y-4">
+            <h3 class="text-base font-bold text-white flex items-center gap-2">
                 ✏️ 選手名の編集
             </h3>
             <div>
                 <label id="modal-slot-label" class="text-xs text-slate-400 block mb-1">枠の場所</label>
-                <input type="text" id="player-name-input" class="w-full bg-slate-900 border border-slate-600 rounded-xl px-4 py-3 text-white text-lg focus:outline-none focus:ring-2 focus:ring-amber-500" placeholder="名前を入力">
+                <input type="text" id="player-name-input" class="w-full bg-slate-900 border border-slate-600 rounded-xl px-4 py-3 text-white text-base focus:outline-none focus:ring-2 focus:ring-amber-500" placeholder="名前を入力">
             </div>
             <div class="flex gap-2 justify-end pt-2">
-                <button onclick="closeNameModal()" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-xl text-sm font-semibold">キャンセル</button>
-                <button onclick="savePlayerName()" class="px-5 py-2 bg-amber-500 hover:bg-amber-400 text-slate-900 rounded-xl text-sm font-bold">保存</button>
+                <button onclick="closeNameModal()" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-xl text-xs font-semibold">キャンセル</button>
+                <button onclick="savePlayerName()" class="px-5 py-2 bg-amber-500 hover:bg-amber-400 text-slate-900 rounded-xl text-xs font-bold">保存</button>
             </div>
         </div>
     </div>
 
-    <!-- Toast Notification for Instructions -->
-    <div id="toast" class="fixed bottom-4 left-1/2 -translate-x-1/2 bg-amber-500 text-slate-950 px-4 py-2 rounded-full font-bold text-xs md:text-sm shadow-lg pointer-events-none transition-all opacity-0 translate-y-4 z-50">
+    <!-- Toast Notification -->
+    <div id="toast" class="fixed bottom-4 left-1/2 -translate-x-1/2 bg-amber-500 text-slate-950 px-4 py-2 rounded-full font-bold text-xs shadow-lg pointer-events-none transition-all opacity-0 translate-y-4 z-50">
         メッセージ
     </div>
 
     <script>
-        // Core state object representing player positions on court and bench
-        // Court keys map to Excel cell identifiers from request: c3, e3, g3, g7, e7, c7
-        const state = {
-            players: {
-                'c3': '選手4', // Position 4 (Front Left)
-                'e3': '選手3', // Position 3 (Front Center)
-                'g3': '選手2', // Position 2 (Front Right)
-                'g7': '選手1', // Position 1 (Back Right / Server)
-                'e7': '選手6', // Position 6 (Back Center)
-                'c7': '選手5', // Position 5 (Back Left)
-                'sub1': '控え1',
-                'sub2': '控え2',
-                'sub3': '控え3',
-                'sub4': '控え4'
-            },
+        // Core State & LocalStorage Synchronization
+        const defaultState = {
+            'c3': '選手4',
+            'e3': '選手3',
+            'g3': '選手2',
+            'g7': '選手1',
+            'e7': '選手6',
+            'c7': '選手5',
+            'sub1': '控え1',
+            'sub2': '控え2',
+            'sub3': '控え3',
+            'sub4': '控え4'
+        };
+
+        let state = {
+            players: JSON.parse(localStorage.getItem('vball_players')) || defaultState,
             isSwapMode: false,
             selectedSlotsForSwap: [],
             activeModalSlot: null
         };
 
-        // Initialize UI on page load
         window.addEventListener('DOMContentLoaded', () => {
             renderPlayers();
+            registerServiceWorker();
         });
 
-        // Update DOM display for all player slots
+        function saveToLocalStorage() {
+            localStorage.setItem('vball_players', JSON.stringify(state.players));
+        }
+
         function renderPlayers() {
             Object.keys(state.players).forEach(slotKey => {
                 const nameEl = document.getElementById(`name-${slotKey}`);
@@ -241,8 +246,7 @@
             });
         }
 
-        // 1. Clockwise Rotation (ローテーション: C3->E3->G3->G7->E7->C7->C3)
-        // Exactly matches the Excel Macro logic built earlier!
+        // 1. Clockwise Rotation
         function rotateClockwise() {
             if (state.isSwapMode) exitSwapMode();
 
@@ -261,12 +265,12 @@
             p['c7'] = tempE7;
             p['c3'] = tempC7;
 
+            saveToLocalStorage();
             renderPlayers();
             showToast('🔄 ローテーション (時計回り)');
         }
 
-        // 2. Counter-Clockwise Rotation (1つ戻す: C3->C7->E7->G7->G3->E3->C3)
-        // Exactly matches the reverse Excel Macro logic!
+        // 2. Counter-Clockwise Rotation
         function rotateCounterClockwise() {
             if (state.isSwapMode) exitSwapMode();
 
@@ -285,11 +289,12 @@
             p['e3'] = tempG3;
             p['c3'] = tempE3;
 
+            saveToLocalStorage();
             renderPlayers();
             showToast('↩️ 1つ戻す (反時計回り)');
         }
 
-        // 3. Member Substitution (メンバー交代) Mode
+        // 3. Member Swap
         function toggleSwapMode() {
             state.isSwapMode = !state.isSwapMode;
             state.selectedSlotsForSwap = [];
@@ -299,10 +304,10 @@
             const swapBtn = document.getElementById('swap-mode-btn');
 
             if (state.isSwapMode) {
-                badge.textContent = '交代モード: 1人目を選択';
-                badge.className = 'text-xs font-bold px-3 py-1.5 rounded-full bg-amber-500 text-slate-950 animate-pulse';
+                badge.textContent = '交代: 1人目選択';
+                badge.className = 'text-xs font-bold px-2.5 py-1 rounded-full bg-amber-500 text-slate-950 animate-pulse';
                 swapBtn.classList.add('ring-4', 'ring-amber-300');
-                showToast('入れ替えたい枠を2つ順番にタップしてください');
+                showToast('入れ替えたい枠を2つ選択してください');
             } else {
                 exitSwapMode();
             }
@@ -316,11 +321,10 @@
             const badge = document.getElementById('status-badge');
             const swapBtn = document.getElementById('swap-mode-btn');
             badge.textContent = '通常モード';
-            badge.className = 'text-xs font-semibold px-3 py-1.5 rounded-full bg-slate-700 text-slate-300';
+            badge.className = 'text-xs font-semibold px-2.5 py-1 rounded-full bg-slate-700 text-slate-300';
             swapBtn.classList.remove('ring-4', 'ring-amber-300');
         }
 
-        // Slot Tap Handler (Name Edit OR Member Swap Selection)
         function handleSlotClick(slotKey) {
             if (state.isSwapMode) {
                 handleSwapSelection(slotKey);
@@ -329,9 +333,7 @@
             }
         }
 
-        // Handle swapping two players
         function handleSwapSelection(slotKey) {
-            // Avoid selecting same slot twice
             if (state.selectedSlotsForSwap.includes(slotKey)) return;
 
             state.selectedSlotsForSwap.push(slotKey);
@@ -340,22 +342,19 @@
             const badge = document.getElementById('status-badge');
 
             if (state.selectedSlotsForSwap.length === 1) {
-                badge.textContent = '交代モード: 2人目を選択';
+                badge.textContent = '交代: 2人目選択';
             } else if (state.selectedSlotsForSwap.length === 2) {
                 const [slotA, slotB] = state.selectedSlotsForSwap;
                 
-                // Swap names in state
                 const temp = state.players[slotA];
                 state.players[slotA] = state.players[slotB];
                 state.players[slotB] = temp;
 
+                saveToLocalStorage();
                 renderPlayers();
                 showToast(`🔁 ${state.players[slotB]} ↔️ ${state.players[slotA]} 交代完了`);
                 
-                // Finish swap action
-                setTimeout(() => {
-                    exitSwapMode();
-                }, 300);
+                setTimeout(() => exitSwapMode(), 300);
             }
         }
 
@@ -372,7 +371,7 @@
             });
         }
 
-        // Modal Name Editing Handlers
+        // Modal Handlers
         function openNameModal(slotKey) {
             state.activeModalSlot = slotKey;
             const input = document.getElementById('player-name-input');
@@ -399,6 +398,7 @@
             if (!state.activeModalSlot) return;
             const input = document.getElementById('player-name-input');
             state.players[state.activeModalSlot] = input.value.trim() || '未設定';
+            saveToLocalStorage();
             renderPlayers();
             closeNameModal();
             showToast('名前を更新しました');
@@ -420,7 +420,6 @@
             return names[key] || key;
         }
 
-        // Helper: Toast Notifications
         let toastTimeout;
         function showToast(msg) {
             const toast = document.getElementById('toast');
@@ -433,6 +432,37 @@
                 toast.classList.remove('opacity-100', 'translate-y-0');
                 toast.classList.add('opacity-0', 'translate-y-4');
             }, 2000);
+        }
+
+        function registerServiceWorker() {
+            if ('serviceWorker' in navigator) {
+                const swCode = `
+                    const CACHE_NAME = 'vball-app-v1';
+                    self.addEventListener('install', (e) => {
+                        e.waitUntil(
+                            caches.open(CACHE_NAME).then((cache) => {
+                                return cache.addAll([
+                                    './',
+                                    'https://cdn.tailwindcss.com',
+                                    'https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap'
+                                ]).catch(() => {});
+                            })
+                        );
+                        self.skipWaiting();
+                    });
+                    self.addEventListener('fetch', (e) => {
+                        e.respondWith(
+                            caches.match(e.request).then((res) => res || fetch(e.request))
+                        );
+                    });
+                `;
+                const blob = new Blob([swCode], { type: 'application/javascript' });
+                const blobURL = URL.createObjectURL(blob);
+
+                navigator.serviceWorker.register(blobURL)
+                    .then(() => console.log('Offline capability registered'))
+                    .catch(() => {});
+            }
         }
     </script>
 </body>
