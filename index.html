@@ -2,9 +2,10 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <!-- 外科的修正: ピンチズームと表示可視域の制限を緩和してiPad等での拡大・縮小・スクロールに対応 -->
+    <!-- iPad/Mobile viewport allowing scroll and user zoom -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>バレーボール 作戦ボード＆ローテーション管理</title>
+    
     <!-- iOS / PWA Meta Tags -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -17,7 +18,6 @@
         * {
             box-sizing: border-box;
         }
-        /* 外科的修正: 全体スクロールを解禁しつつ、作戦ボードとトークン操作時のみスクロール干渉を防止 */
         body {
             font-family: 'Inter', sans-serif;
             user-select: none;
@@ -27,7 +27,7 @@
             background-color: #0f172a;
         }
         
-        /* キャンバスとプレイヤーのドラッグ操作エリアのみtouch-actionをnoneに限定 */
+        /* Prevent scroll interference only on court & canvas dragging elements */
         #court-container, .player-token, .ball-token, canvas {
             touch-action: none;
         }
@@ -112,24 +112,33 @@
             <button onclick="setLineWidth(8)" id="width-8" class="width-btn px-2 py-0.5 rounded text-[10px] font-bold bg-slate-700 text-slate-300 hover:bg-slate-600">太</button>
         </div>
 
-        <!-- Color Options Inline -->
+        <!-- Color Options -->
         <div class="flex items-center gap-1.5 border-l border-slate-700 pl-2 shrink-0">
-            <span class="text-[10px] text-slate-400 font-bold hidden sm:inline">色:</span>
-            <div class="flex items-center gap-1">
-                <button onclick="setColor('#000000')" id="color-black" class="color-btn w-5 h-5 rounded-full bg-black border-2 border-slate-400 focus:scale-125 transition-transform"></button>
-                <button onclick="setColor('#ef4444')" id="color-red" class="color-btn w-5 h-5 rounded-full bg-red-500 border-2 border-white/80 focus:scale-125 transition-transform ring-2 ring-amber-400"></button>
-                <button onclick="setColor('#3b82f6')" id="color-blue" class="color-btn w-5 h-5 rounded-full bg-blue-500 border-2 border-white/80 focus:scale-125 transition-transform"></button>
-                <button onclick="setColor('#22c55e')" id="color-green" class="color-btn w-5 h-5 rounded-full bg-green-500 border-2 border-white/80 focus:scale-125 transition-transform"></button>
-                <button onclick="setColor('#eab308')" id="color-yellow" class="color-btn w-5 h-5 rounded-full bg-yellow-400 border-2 border-white/80 focus:scale-125 transition-transform"></button>
-            </div>
+            <button onclick="setColor('#ef4444')" id="color-red" class="color-btn w-5 h-5 rounded-full bg-red-500 ring-2 ring-amber-400 transition-all"></button>
+            <button onclick="setColor('#3b82f6')" id="color-blue" class="color-btn w-5 h-5 rounded-full bg-blue-500 hover:scale-110 transition-all"></button>
+            <button onclick="setColor('#22c55e')" id="color-green" class="color-btn w-5 h-5 rounded-full bg-green-500 hover:scale-110 transition-all"></button>
+            <button onclick="setColor('#eab308')" id="color-yellow" class="color-btn w-5 h-5 rounded-full bg-yellow-500 hover:scale-110 transition-all"></button>
+            <button onclick="setColor('#000000')" id="color-black" class="color-btn w-5 h-5 rounded-full bg-black hover:scale-110 transition-all border border-slate-600"></button>
         </div>
     </header>
 
-    <!-- Strategy Board Tabs Bar (1 to 6) -->
-    <div class="flex items-center gap-1.5 mb-2 overflow-x-auto shrink-0 bg-slate-900/60 p-1 rounded-xl border border-slate-800">
-        <span class="text-[10px] text-slate-400 font-bold px-1 shrink-0">📋 作戦:</span>
-        <div id="tabs-container" class="flex gap-1">
-            <!-- Tabs dynamically rendered -->
+    <!-- Strategy Board Tabs Bar (1 to 6) + Copy & Reset Buttons -->
+    <div class="flex items-center justify-between gap-1.5 mb-2 overflow-x-auto shrink-0 bg-slate-900/60 p-1 rounded-xl border border-slate-800">
+        <div class="flex items-center gap-1.5 overflow-x-auto">
+            <span class="text-[10px] text-slate-400 font-bold px-1 shrink-0">📋 作戦:</span>
+            <div id="tabs-container" class="flex gap-1">
+                <!-- Tabs dynamically rendered -->
+            </div>
+        </div>
+        
+        <!-- Action Buttons for Current Pattern -->
+        <div class="flex items-center gap-1 shrink-0 pl-2 border-l border-slate-700">
+            <button onclick="openCopyModal()" class="px-2.5 py-1 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-bold transition-all shadow flex items-center gap-1 active:scale-95">
+                📋 パターンコピー
+            </button>
+            <button onclick="openResetConfirmModal()" class="px-2.5 py-1 bg-rose-900/80 hover:bg-rose-800 text-rose-200 border border-rose-700/60 rounded-lg text-xs font-bold transition-all shadow flex items-center gap-1 active:scale-95">
+                🧹 パターンリセット
+            </button>
         </div>
     </div>
 
@@ -223,10 +232,9 @@
                     <input type="text" id="player-name-input" class="w-full bg-slate-900 border border-slate-600 rounded-xl px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-amber-500" placeholder="選手名を入力">
                 </div>
 
-                <!-- Registered Names Quick Selection List -->
+                <!-- Registered Names Quick Selection List (With vertical scroll) -->
                 <div class="space-y-1">
                     <label class="text-[10px] text-slate-400 font-bold">登録済みリストから選択</label>
-                    <!-- 外科的修正: max-h-40 と overflow-y-auto, touch-action: pan-y で枠内での滑らかな縦スクロールを確保 -->
                     <div id="quick-name-list" class="max-h-40 overflow-y-auto bg-slate-900/80 border border-slate-700 rounded-xl p-2 flex flex-wrap gap-1.5" style="touch-action: pan-y;">
                         <!-- Dynamically populated -->
                     </div>
@@ -236,6 +244,53 @@
             <div class="flex gap-2 justify-end pt-2 border-t border-slate-700">
                 <button onclick="closeNameModal()" class="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-lg text-xs font-semibold">キャンセル</button>
                 <button onclick="savePlayerName()" class="px-4 py-1.5 bg-amber-500 hover:bg-amber-400 text-slate-900 rounded-lg text-xs font-bold">保存</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pattern Copy Modal -->
+    <div id="copy-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm hidden items-center justify-center z-50 p-4 overflow-y-auto">
+        <div class="bg-slate-800 border border-slate-700 rounded-2xl p-4 max-w-sm w-full shadow-2xl space-y-4 my-auto">
+            <h3 class="text-sm font-bold text-white flex items-center justify-between border-b border-slate-700 pb-2">
+                <span>📋 パターンのコピー</span>
+                <button onclick="closeCopyModal()" class="text-slate-400 hover:text-white text-base">✕</button>
+            </h3>
+            
+            <p class="text-xs text-slate-300">
+                「<span id="copy-target-pattern-name" class="font-bold text-amber-400">パターン X</span>」にコピーする元のパターンを選択してください：
+            </p>
+
+            <!-- Pattern Select List -->
+            <div id="copy-pattern-list" class="grid grid-cols-2 gap-2">
+                <!-- Dynamically generated buttons 1~6 -->
+            </div>
+
+            <div class="flex gap-2 justify-end pt-3 border-t border-slate-700">
+                <button onclick="closeCopyModal()" class="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-lg text-xs font-semibold">キャンセル</button>
+                <button id="btn-execute-copy" onclick="executeCopyPattern()" disabled class="px-4 py-1.5 bg-indigo-600 text-white rounded-lg text-xs font-bold disabled:opacity-40 disabled:cursor-not-allowed hover:bg-indigo-500 transition-all">
+                    コピー実行
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Reset Confirm Modal -->
+    <div id="reset-confirm-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm hidden items-center justify-center z-50 p-4 overflow-y-auto">
+        <div class="bg-slate-800 border border-slate-700 rounded-2xl p-4 max-w-sm w-full shadow-2xl space-y-3 my-auto">
+            <h3 class="text-sm font-bold text-rose-400 flex items-center justify-between border-b border-slate-700 pb-2">
+                <span>⚠️ パターンリセットの確認</span>
+                <button onclick="closeResetConfirmModal()" class="text-slate-400 hover:text-white text-base">✕</button>
+            </h3>
+            
+            <p class="text-xs text-slate-300 leading-relaxed">
+                現在開いている「<span id="reset-target-pattern-name" class="font-bold text-amber-400">パターン X</span>」の内容（選手名、位置、描画データなど）を全消去して完全な初期状態に戻しますか？
+            </p>
+
+            <div class="flex gap-2 justify-end pt-3 border-t border-slate-700">
+                <button onclick="closeResetConfirmModal()" class="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-lg text-xs font-semibold">キャンセル</button>
+                <button onclick="executeResetPattern()" class="px-4 py-1.5 bg-rose-600 hover:bg-rose-500 text-white rounded-lg text-xs font-bold transition-all">
+                    リセット実行
+                </button>
             </div>
         </div>
     </div>
@@ -281,6 +336,9 @@
         // Direct tap substitution mode states
         let isSubMode = false;
         let subFirstSelection = null;
+
+        // Pattern Copy selection state
+        let selectedSourcePattern = null;
 
         function createEmptyBoardState() {
             return {
@@ -972,6 +1030,92 @@
             renderPlayers();
             closeNameModal();
             showToast('名前を更新しました');
+        }
+
+        /* --- Pattern Copy Modal & Logic --- */
+        function openCopyModal() {
+            saveCurrentBoardState();
+            selectedSourcePattern = null;
+
+            document.getElementById('copy-target-pattern-name').innerText = `パターン ${currentTab}`;
+            const btnExecute = document.getElementById('btn-execute-copy');
+            btnExecute.disabled = true;
+
+            const listContainer = document.getElementById('copy-pattern-list');
+            listContainer.innerHTML = '';
+
+            for (let i = 1; i <= 6; i++) {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+
+                if (i === currentTab) {
+                    btn.className = 'p-3 bg-slate-900 text-slate-600 rounded-xl font-bold border border-slate-800 cursor-not-allowed opacity-50 flex items-center justify-between';
+                    btn.innerHTML = `<span>パターン ${i}</span><span class="text-[9px] bg-slate-800 text-slate-500 px-1.5 py-0.5 rounded">現在地</span>`;
+                    btn.disabled = true;
+                } else {
+                    btn.className = 'copy-source-btn p-3 bg-slate-900 hover:bg-slate-700 text-white rounded-xl font-bold border border-slate-700 transition-all flex items-center justify-between text-xs';
+                    btn.innerHTML = `<span>パターン ${i}</span>`;
+                    btn.onclick = () => selectCopySourcePattern(i, btn);
+                }
+
+                listContainer.appendChild(btn);
+            }
+
+            const modal = document.getElementById('copy-modal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function selectCopySourcePattern(sourceIdx, btnEl) {
+            selectedSourcePattern = sourceIdx;
+
+            document.querySelectorAll('.copy-source-btn').forEach(b => {
+                b.classList.remove('ring-2', 'ring-indigo-400', 'bg-indigo-950/80', 'border-indigo-500');
+                b.classList.add('bg-slate-900', 'border-slate-700');
+            });
+
+            btnEl.classList.remove('bg-slate-900', 'border-slate-700');
+            btnEl.classList.add('ring-2', 'ring-indigo-400', 'bg-indigo-950/80', 'border-indigo-500');
+
+            document.getElementById('btn-execute-copy').disabled = false;
+        }
+
+        function closeCopyModal() {
+            document.getElementById('copy-modal').classList.add('hidden');
+            selectedSourcePattern = null;
+        }
+
+        function executeCopyPattern() {
+            if (!selectedSourcePattern || selectedSourcePattern === currentTab) return;
+
+            // Deep clone the source board state to current pattern
+            const sourceState = boardsData[selectedSourcePattern];
+            boardsData[currentTab] = JSON.parse(JSON.stringify(sourceState));
+
+            loadTabBoard(currentTab);
+            saveCurrentBoardState();
+            closeCopyModal();
+            showToast(`📋 パターン ${selectedSourcePattern} のデータをコピーしました`);
+        }
+
+        /* --- Pattern Reset Modal & Logic --- */
+        function openResetConfirmModal() {
+            document.getElementById('reset-target-pattern-name').innerText = `パターン ${currentTab}`;
+            const modal = document.getElementById('reset-confirm-modal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function closeResetConfirmModal() {
+            document.getElementById('reset-confirm-modal').classList.add('hidden');
+        }
+
+        function executeResetPattern() {
+            boardsData[currentTab] = createEmptyBoardState();
+            loadTabBoard(currentTab);
+            saveCurrentBoardState();
+            closeResetConfirmModal();
+            showToast(`🧹 パターン ${currentTab} を初期状態にリセットしました`);
         }
 
         let toastTimeout;
