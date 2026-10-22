@@ -3,421 +3,849 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>バレーボール ローテーション＆メンバー管理</title>
-    <!-- iOS / PWA Fullscreen Meta Tags -->
+    <title>バレーボール 作戦ボード＆ローテーション管理</title>
+    <!-- iOS / PWA Meta Tags -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="バレーローテ">
+    <meta name="apple-mobile-web-app-title" content="バレーボード">
     
-    <!-- PWA Web App Manifest data inline via Blob URL in JS or dynamic fallback -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     
     <style>
         * {
             box-sizing: border-box;
-            touch-action: manipulation;
+            touch-action: none; /* Prevents scroll interference during drawing & dragging */
         }
         body {
             font-family: 'Inter', sans-serif;
             user-select: none;
             -webkit-user-select: none;
-            /* Adaptive full-screen height handling for iOS Safari toolbar dynamic height */
             height: 100vh;
             height: 100dvh;
             overflow: hidden;
+            background-color: #0f172a;
         }
         
-        /* Court hardwood graphics styling */
         .court-bg {
             background-color: #d97706;
-            background-image: linear-gradient(135deg, rgba(255,255,255,0.06) 25%, transparent 25%), 
-                              linear-gradient(225deg, rgba(255,255,255,0.06) 25%, transparent 25%), 
-                              linear-gradient(45deg, rgba(255,255,255,0.06) 25%, transparent 25%), 
-                              linear-gradient(315deg, rgba(255,255,255,0.06) 25%, transparent 25%);
-            background-size: 20px 20px;
+            background-image: linear-gradient(135deg, rgba(255,255,255,0.08) 25%, transparent 25%), 
+                              linear-gradient(225deg, rgba(255,255,255,0.08) 25%, transparent 25%), 
+                              linear-gradient(45deg, rgba(255,255,255,0.08) 25%, transparent 25%), 
+                              linear-gradient(315deg, rgba(255,255,255,0.08) 25%, transparent 25%);
+            background-size: 24px 24px;
         }
 
         .net-line {
             background: repeating-linear-gradient(
                 90deg,
                 #1e3a8a,
-                #1e3a8a 10px,
-                #ffffff 10px,
-                #ffffff 20px
+                #1e3a8a 12px,
+                #ffffff 12px,
+                #ffffff 24px
             );
+        }
+
+        .player-token {
+            touch-action: none;
+            cursor: move;
+            transition: box-shadow 0.2s ease, border-color 0.2s ease;
+        }
+
+        .player-token.dragging {
+            z-index: 50 !important;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.6);
+            border-color: #f59e0b !important;
+        }
+
+        .ball-token {
+            touch-action: none;
+            cursor: move;
+            z-index: 45;
+            transition: transform 0.1s ease;
+        }
+        .ball-token:active {
+            transform: scale(1.2);
         }
     </style>
 </head>
-<body class="bg-slate-900 text-slate-100 flex flex-col justify-between p-2 md:p-4">
+<body class="text-slate-100 flex flex-col justify-between p-2 md:p-3">
 
-    <!-- Compact Header -->
-    <header class="flex justify-between items-center bg-slate-800/90 rounded-xl px-3 py-2 mb-2 shadow-md border border-slate-700/60 shrink-0">
-        <div class="flex items-center gap-2">
-            <h1 class="text-sm md:text-xl font-bold text-amber-400 flex items-center gap-1.5">
-                🏐 バレーボール ローテーションボード
-            </h1>
-            <span class="text-[10px] text-slate-400 hidden sm:inline">(オフライン対応)</span>
+    <!-- Compact Toolbar Header without Title line -->
+    <header class="flex items-center justify-between bg-slate-800/95 rounded-xl px-3 py-1.5 mb-2 shadow-md border border-slate-700/60 shrink-0 gap-2 overflow-x-auto">
+        
+        <!-- Drawing Tools -->
+        <div class="flex items-center gap-1 shrink-0">
+            <button onclick="setTool('select')" id="tool-select" class="tool-btn px-2 py-1 rounded-lg text-xs font-semibold bg-amber-500 text-slate-950 flex items-center gap-1 shadow">
+                ✋ 選択/移動
+            </button>
+            <button onclick="setTool('pen')" id="tool-pen" class="tool-btn px-2 py-1 rounded-lg text-xs font-semibold bg-slate-700 text-slate-300 hover:bg-slate-600 flex items-center gap-1">
+                ✏️ ペン
+            </button>
+            <button onclick="setTool('arrow')" id="tool-arrow" class="tool-btn px-2 py-1 rounded-lg text-xs font-semibold bg-slate-700 text-slate-300 hover:bg-slate-600 flex items-center gap-1">
+                ➔ 矢印
+            </button>
+            <button onclick="setTool('line')" id="tool-line" class="tool-btn px-2 py-1 rounded-lg text-xs font-semibold bg-slate-700 text-slate-300 hover:bg-slate-600 flex items-center gap-1">
+                ― 直線
+            </button>
+            <button onclick="setTool('circle')" id="tool-circle" class="tool-btn px-2 py-1 rounded-lg text-xs font-semibold bg-slate-700 text-slate-300 hover:bg-slate-600 flex items-center gap-1">
+                ◯ 円
+            </button>
+            <button onclick="setTool('eraser')" id="tool-eraser" class="tool-btn px-2 py-1 rounded-lg text-xs font-semibold bg-slate-700 text-slate-300 hover:bg-slate-600 flex items-center gap-1">
+                🧹 消しゴム
+            </button>
+            <button onclick="clearCanvas()" class="px-2 py-1 rounded-lg text-xs font-semibold bg-rose-900/80 hover:bg-rose-800 text-rose-200 border border-rose-700/60 flex items-center gap-1">
+                🗑️ 全消去
+            </button>
         </div>
-        <div id="status-badge" class="text-xs font-semibold px-2.5 py-1 rounded-full bg-slate-700 text-slate-300 transition-all">
-            通常モード
+
+        <!-- Line Width Selector -->
+        <div class="flex items-center gap-1 border-l border-slate-700 pl-2 shrink-0">
+            <span class="text-[10px] text-slate-400 font-bold hidden sm:inline">太さ:</span>
+            <button onclick="setLineWidth(2)" id="width-2" class="width-btn px-2 py-0.5 rounded text-[10px] font-bold bg-slate-700 text-slate-300 hover:bg-slate-600">細</button>
+            <button onclick="setLineWidth(4)" id="width-4" class="width-btn px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500 text-slate-950">中</button>
+            <button onclick="setLineWidth(8)" id="width-8" class="width-btn px-2 py-0.5 rounded text-[10px] font-bold bg-slate-700 text-slate-300 hover:bg-slate-600">太</button>
+        </div>
+
+        <!-- Color Options Inline -->
+        <div class="flex items-center gap-1.5 border-l border-slate-700 pl-2 shrink-0">
+            <span class="text-[10px] text-slate-400 font-bold hidden sm:inline">色:</span>
+            <div class="flex items-center gap-1">
+                <button onclick="setColor('#000000')" id="color-black" class="color-btn w-5 h-5 rounded-full bg-black border-2 border-slate-400 focus:scale-125 transition-transform"></button>
+                <button onclick="setColor('#ef4444')" id="color-red" class="color-btn w-5 h-5 rounded-full bg-red-500 border-2 border-white/80 focus:scale-125 transition-transform ring-2 ring-amber-400"></button>
+                <button onclick="setColor('#3b82f6')" id="color-blue" class="color-btn w-5 h-5 rounded-full bg-blue-500 border-2 border-white/80 focus:scale-125 transition-transform"></button>
+                <button onclick="setColor('#22c55e')" id="color-green" class="color-btn w-5 h-5 rounded-full bg-green-500 border-2 border-white/80 focus:scale-125 transition-transform"></button>
+                <button onclick="setColor('#eab308')" id="color-yellow" class="color-btn w-5 h-5 rounded-full bg-yellow-400 border-2 border-white/80 focus:scale-125 transition-transform"></button>
+            </div>
         </div>
     </header>
 
-    <!-- Main Interactive Responsive Container -->
-    <main class="flex-1 grid grid-cols-12 gap-2 md:gap-4 items-stretch min-h-0 overflow-hidden">
+    <!-- Strategy Board Tabs Bar (1 to 6) -->
+    <div class="flex items-center gap-1.5 mb-2 overflow-x-auto shrink-0 bg-slate-900/60 p-1 rounded-xl border border-slate-800">
+        <span class="text-[10px] text-slate-400 font-bold px-1 shrink-0">📋 作戦:</span>
+        <div id="tabs-container" class="flex gap-1">
+            <!-- Tabs dynamically rendered -->
+        </div>
+    </div>
+
+    <main class="flex-1 grid grid-cols-12 gap-2 items-stretch min-h-0 overflow-hidden relative">
         
-        <!-- Left Section: Court & Bench Area (9 Columns) -->
-        <div class="col-span-9 flex flex-col justify-between gap-2 h-full overflow-hidden">
+        <!-- Court Area (10 Columns) -->
+        <div id="court-container" class="col-span-10 relative court-bg border-2 md:border-4 border-white rounded-2xl shadow-2xl flex flex-col justify-between overflow-hidden min-h-0">
             
-            <!-- Volleyball Half Court (Dynamic Sizing to Prevent Cutoff) -->
-            <div class="relative flex-1 court-bg border-2 md:border-4 border-white rounded-2xl shadow-xl p-2 md:p-4 flex flex-col justify-between overflow-hidden min-h-0">
-                
-                <!-- Net Line -->
-                <div class="absolute top-0 left-0 right-0 h-3 md:h-4 net-line shadow-md border-b border-slate-900 flex items-center justify-center">
-                    <span class="bg-blue-900 text-white text-[9px] md:text-xs font-bold px-2 py-0.5 rounded-full tracking-wider shadow">NET (ネット)</span>
-                </div>
-
-                <!-- Attack Line (3m Line) -->
-                <div class="absolute top-[35%] left-0 right-0 border-b-2 md:border-b-4 border-dashed border-white/70 pointer-events-none"></div>
-                <div class="absolute top-[36%] right-2 text-[9px] md:text-xs text-white/70 font-semibold pointer-events-none">アタックライン</div>
-
-                <!-- Front Row Slots -->
-                <div class="grid grid-cols-3 gap-1.5 md:gap-3 mt-4 z-10 flex-1 items-stretch">
-                    <!-- Position 4: Front-Left (C3) -->
-                    <div id="slot-c3" onclick="handleSlotClick('c3')" class="court-slot bg-slate-900/85 hover:bg-slate-800 border-2 border-amber-400/80 rounded-xl p-1.5 md:p-2 flex flex-col items-center justify-center cursor-pointer transition-all shadow-md active:scale-95">
-                        <span class="text-[9px] md:text-xs text-amber-300 font-bold">4 / レフト</span>
-                        <span id="name-c3" class="text-xs md:text-lg font-bold text-white text-center break-all line-clamp-2">選手4</span>
-                    </div>
-
-                    <!-- Position 3: Front-Center (E3) -->
-                    <div id="slot-e3" onclick="handleSlotClick('e3')" class="court-slot bg-slate-900/85 hover:bg-slate-800 border-2 border-amber-400/80 rounded-xl p-1.5 md:p-2 flex flex-col items-center justify-center cursor-pointer transition-all shadow-md active:scale-95">
-                        <span class="text-[9px] md:text-xs text-amber-300 font-bold">3 / センター</span>
-                        <span id="name-e3" class="text-xs md:text-lg font-bold text-white text-center break-all line-clamp-2">選手3</span>
-                    </div>
-
-                    <!-- Position 2: Front-Right (G3) -->
-                    <div id="slot-g3" onclick="handleSlotClick('g3')" class="court-slot bg-slate-900/85 hover:bg-slate-800 border-2 border-amber-400/80 rounded-xl p-1.5 md:p-2 flex flex-col items-center justify-center cursor-pointer transition-all shadow-md active:scale-95">
-                        <span class="text-[9px] md:text-xs text-amber-300 font-bold">2 / ライト</span>
-                        <span id="name-g3" class="text-xs md:text-lg font-bold text-white text-center break-all line-clamp-2">選手2</span>
-                    </div>
-                </div>
-
-                <!-- Back Row Slots -->
-                <div class="grid grid-cols-3 gap-1.5 md:gap-3 z-10 flex-1 items-stretch mt-1.5 md:mt-2">
-                    <!-- Position 5: Back-Left (C7) -->
-                    <div id="slot-c7" onclick="handleSlotClick('c7')" class="court-slot bg-slate-900/85 hover:bg-slate-800 border-2 border-amber-400/80 rounded-xl p-1.5 md:p-2 flex flex-col items-center justify-center cursor-pointer transition-all shadow-md active:scale-95">
-                        <span class="text-[9px] md:text-xs text-amber-300 font-bold">5 / バックレフト</span>
-                        <span id="name-c7" class="text-xs md:text-lg font-bold text-white text-center break-all line-clamp-2">選手5</span>
-                    </div>
-
-                    <!-- Position 6: Back-Center (E7) -->
-                    <div id="slot-e7" onclick="handleSlotClick('e7')" class="court-slot bg-slate-900/85 hover:bg-slate-800 border-2 border-amber-400/80 rounded-xl p-1.5 md:p-2 flex flex-col items-center justify-center cursor-pointer transition-all shadow-md active:scale-95">
-                        <span class="text-[9px] md:text-xs text-amber-300 font-bold">6 / バックセンター</span>
-                        <span id="name-e7" class="text-xs md:text-lg font-bold text-white text-center break-all line-clamp-2">選手6</span>
-                    </div>
-
-                    <!-- Position 1: Back-Right (G7) -->
-                    <div id="slot-g7" onclick="handleSlotClick('g7')" class="court-slot bg-slate-900/85 hover:bg-slate-800 border-2 border-amber-400/80 rounded-xl p-1.5 md:p-2 flex flex-col items-center justify-center cursor-pointer transition-all shadow-md active:scale-95">
-                        <span class="text-[9px] md:text-xs text-amber-300 font-bold">1 / サーブ (バックライト)</span>
-                        <span id="name-g7" class="text-xs md:text-lg font-bold text-white text-center break-all line-clamp-2">選手1</span>
-                    </div>
-                </div>
-
+            <!-- Net Line -->
+            <div class="absolute top-0 left-0 right-0 h-3 md:h-4 net-line shadow-md border-b border-slate-900 flex items-center justify-center z-10 pointer-events-none">
+                <span class="bg-blue-900 text-white text-[9px] md:text-xs font-bold px-2 py-0.5 rounded-full tracking-wider shadow">NET (ネット)</span>
             </div>
 
-            <!-- Bench / Reserve Players Section (Guaranteed visible) -->
-            <div class="bg-slate-800/90 rounded-xl p-2 md:p-3 border border-slate-700 shadow-md shrink-0">
-                <div class="text-[11px] md:text-xs font-semibold text-slate-400 mb-1 flex items-center gap-1">
-                    👥 控え選手 (サブ 4名)
-                </div>
-                <div class="grid grid-cols-4 gap-1.5 md:gap-2">
-                    <div id="slot-sub1" onclick="handleSlotClick('sub1')" class="court-slot bg-slate-700/80 hover:bg-slate-700 border border-slate-500/50 rounded-lg p-1.5 md:p-2 flex flex-col items-center justify-center cursor-pointer transition-all shadow h-12 md:h-16 active:scale-95">
-                        <span class="text-[8px] md:text-[10px] text-slate-400">控え 1</span>
-                        <span id="name-sub1" class="text-xs md:text-sm font-medium text-slate-200 text-center break-all line-clamp-1">控え1</span>
-                    </div>
-                    <div id="slot-sub2" onclick="handleSlotClick('sub2')" class="court-slot bg-slate-700/80 hover:bg-slate-700 border border-slate-500/50 rounded-lg p-1.5 md:p-2 flex flex-col items-center justify-center cursor-pointer transition-all shadow h-12 md:h-16 active:scale-95">
-                        <span class="text-[8px] md:text-[10px] text-slate-400">控え 2</span>
-                        <span id="name-sub2" class="text-xs md:text-sm font-medium text-slate-200 text-center break-all line-clamp-1">控え2</span>
-                    </div>
-                    <div id="slot-sub3" onclick="handleSlotClick('sub3')" class="court-slot bg-slate-700/80 hover:bg-slate-700 border border-slate-500/50 rounded-lg p-1.5 md:p-2 flex flex-col items-center justify-center cursor-pointer transition-all shadow h-12 md:h-16 active:scale-95">
-                        <span class="text-[8px] md:text-[10px] text-slate-400">控え 3</span>
-                        <span id="name-sub3" class="text-xs md:text-sm font-medium text-slate-200 text-center break-all line-clamp-1">控え3</span>
-                    </div>
-                    <div id="slot-sub4" onclick="handleSlotClick('sub4')" class="court-slot bg-slate-700/80 hover:bg-slate-700 border border-slate-500/50 rounded-lg p-1.5 md:p-2 flex flex-col items-center justify-center cursor-pointer transition-all shadow h-12 md:h-16 active:scale-95">
-                        <span class="text-[8px] md:text-[10px] text-slate-400">控え 4</span>
-                        <span id="name-sub4" class="text-xs md:text-sm font-medium text-slate-200 text-center break-all line-clamp-1">控え4</span>
-                    </div>
-                </div>
-            </div>
+            <!-- Attack Line (3m Line) -->
+            <div class="absolute top-[35%] left-0 right-0 border-b-2 md:border-b-4 border-dashed border-white/70 pointer-events-none z-10"></div>
+            <div class="absolute top-[36%] right-2 text-[9px] md:text-xs text-white/70 font-semibold pointer-events-none z-10">アタックライン</div>
+
+            <!-- Canvas for Drawing & Control Points (Layer 20) -->
+            <canvas id="drawing-canvas" class="absolute inset-0 z-20 w-full h-full"></canvas>
+
+            <!-- Interactive Ball Tokens Layer (Layer 25) -->
+            <div id="balls-layer" class="absolute inset-0 z-25 pointer-events-none"></div>
+
+            <!-- Interactive Player Tokens Layer (Layer 30) -->
+            <div id="players-layer" class="absolute inset-0 z-30 pointer-events-none"></div>
 
         </div>
 
-        <!-- Right Control Panel: 3 Action Buttons (3 Columns) -->
-        <div class="col-span-3 flex flex-col gap-2 md:gap-3 justify-center">
+        <!-- Right Control Panel (2 Columns) -->
+        <div class="col-span-2 flex flex-col justify-between gap-2 h-full">
             
-            <!-- Button 1: Clockwise Rotation -->
-            <button onclick="rotateClockwise()" class="flex-1 bg-gradient-to-br from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white rounded-xl md:rounded-2xl p-2 md:p-4 shadow-lg flex flex-col items-center justify-center gap-1 border-2 border-emerald-300/40 active:scale-95 transition-all">
-                <svg class="w-6 h-6 md:w-10 md:h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
-                </svg>
-                <span class="font-bold text-xs md:text-lg text-center leading-tight">ローテーション<br><span class="text-[10px] md:text-xs font-normal opacity-90">(時計回り)</span></span>
-            </button>
+            <!-- Actions -->
+            <div class="flex flex-col gap-1.5">
+                <!-- Add Ball Button -->
+                <button onclick="addBall()" class="bg-gradient-to-br from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 rounded-xl p-1.5 md:p-2 shadow-md flex items-center justify-center gap-1 border border-amber-300/50 active:scale-95 transition-all font-bold text-xs md:text-sm">
+                    🏐 ボール追加
+                </button>
 
-            <!-- Button 2: Counter-Clockwise Rotation -->
-            <button onclick="rotateCounterClockwise()" class="flex-1 bg-gradient-to-br from-blue-600 to-indigo-700 hover:from-blue-500 hover:to-indigo-600 text-white rounded-xl md:rounded-2xl p-2 md:p-4 shadow-lg flex flex-col items-center justify-center gap-1 border-2 border-blue-400/40 active:scale-95 transition-all">
-                <svg class="w-6 h-6 md:w-10 md:h-10 transform -scale-x-100" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
-                </svg>
-                <span class="font-bold text-xs md:text-lg text-center leading-tight">1つ戻す<br><span class="text-[10px] md:text-xs font-normal opacity-90">(反時計回り)</span></span>
-            </button>
+                <!-- Clockwise Rotation -->
+                <button onclick="rotateClockwise()" class="bg-gradient-to-br from-emerald-600 to-teal-700 hover:from-emerald-500 hover:to-teal-600 text-white rounded-xl p-1.5 md:p-2 shadow-md flex flex-col items-center justify-center gap-0.5 border border-emerald-400/40 active:scale-95 transition-all">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                    </svg>
+                    <span class="font-bold text-[9px] md:text-xs text-center leading-tight">ローテーション<br><span class="font-normal opacity-80">(時計回り)</span></span>
+                </button>
 
-            <!-- Button 3: Member Swap / Substitution -->
-            <button id="swap-mode-btn" onclick="toggleSwapMode()" class="flex-1 bg-gradient-to-br from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-white rounded-xl md:rounded-2xl p-2 md:p-4 shadow-lg flex flex-col items-center justify-center gap-1 border-2 border-amber-300/40 active:scale-95 transition-all">
-                <svg class="w-6 h-6 md:w-10 md:h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path>
-                </svg>
-                <span class="font-bold text-xs md:text-lg text-center leading-tight">メンバー交代<br><span class="text-[10px] md:text-xs font-normal opacity-90">(2名選択)</span></span>
-            </button>
+                <!-- Counter-Clockwise Rotation -->
+                <button onclick="rotateCounterClockwise()" class="bg-gradient-to-br from-blue-600 to-indigo-700 hover:from-blue-500 hover:to-indigo-600 text-white rounded-xl p-1.5 md:p-2 shadow-md flex flex-col items-center justify-center gap-0.5 border border-blue-400/40 active:scale-95 transition-all">
+                    <svg class="w-4 h-4 transform -scale-x-100" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                    </svg>
+                    <span class="font-bold text-[9px] md:text-xs text-center leading-tight">1つ戻す<br><span class="font-normal opacity-80">(反時計回り)</span></span>
+                </button>
+
+                <!-- Reset Player Positions Button -->
+                <button onclick="resetPlayerPositions()" class="bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-xl p-1.5 shadow flex items-center justify-center gap-1 border border-slate-600 text-[10px] md:text-xs font-semibold active:scale-95 transition-all">
+                    🎯 位置リセット
+                </button>
+            </div>
+
+            <!-- Sub Bench Section with 6 sub players -->
+            <div class="bg-slate-800/90 rounded-xl p-1.5 border border-slate-700/80 shadow flex flex-col gap-1 overflow-y-auto flex-1">
+                <span class="text-[9px] md:text-xs text-slate-400 font-bold text-center">👥 控え選手</span>
+                <div id="sub-bench" class="flex flex-col gap-1 flex-1">
+                    <!-- Sub tokens inserted dynamically -->
+                </div>
+            </div>
 
         </div>
 
     </main>
 
-    <!-- Name Input Custom Modal -->
+    <!-- Modal for editing player name -->
     <div id="name-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
-        <div class="bg-slate-800 border border-slate-700 rounded-2xl p-5 max-w-sm w-full shadow-2xl space-y-4">
-            <h3 class="text-base font-bold text-white flex items-center gap-2">
-                ✏️ 選手名の編集
+        <div class="bg-slate-800 border border-slate-700 rounded-2xl p-4 max-w-sm w-full shadow-2xl space-y-3">
+            <h3 class="text-sm font-bold text-white flex items-center gap-1.5">
+                ✏️ 選手名の変更
             </h3>
             <div>
-                <label id="modal-slot-label" class="text-xs text-slate-400 block mb-1">枠の場所</label>
-                <input type="text" id="player-name-input" class="w-full bg-slate-900 border border-slate-600 rounded-xl px-4 py-3 text-white text-base focus:outline-none focus:ring-2 focus:ring-amber-500" placeholder="名前を入力">
+                <input type="text" id="player-name-input" class="w-full bg-slate-900 border border-slate-600 rounded-xl px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-amber-500" placeholder="選手名を入力">
             </div>
-            <div class="flex gap-2 justify-end pt-2">
-                <button onclick="closeNameModal()" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-xl text-xs font-semibold">キャンセル</button>
-                <button onclick="savePlayerName()" class="px-5 py-2 bg-amber-500 hover:bg-amber-400 text-slate-900 rounded-xl text-xs font-bold">保存</button>
+            <div class="flex gap-2 justify-end pt-1">
+                <button onclick="closeNameModal()" class="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-lg text-xs font-semibold">キャンセル</button>
+                <button onclick="savePlayerName()" class="px-4 py-1.5 bg-amber-500 hover:bg-amber-400 text-slate-900 rounded-lg text-xs font-bold">保存</button>
             </div>
         </div>
     </div>
 
-    <!-- Toast Notification -->
+    <!-- Notification Toast -->
     <div id="toast" class="fixed bottom-4 left-1/2 -translate-x-1/2 bg-amber-500 text-slate-950 px-4 py-2 rounded-full font-bold text-xs shadow-lg pointer-events-none transition-all opacity-0 translate-y-4 z-50">
         メッセージ
     </div>
 
     <script>
-        // Core State & LocalStorage Synchronization
-        const defaultState = {
-            'c3': '選手4',
-            'e3': '選手3',
-            'g3': '選手2',
-            'g7': '選手1',
-            'e7': '選手6',
-            'c7': '選手5',
-            'sub1': '控え1',
-            'sub2': '控え2',
-            'sub3': '控え3',
-            'sub4': '控え4'
+        // Default positions for court and bench
+        const defaultPositions = {
+            'c3': { x: 18, y: 15, name: '選手4', posName: '4/レフト' },
+            'e3': { x: 44, y: 15, name: '選手3', posName: '3/センター' },
+            'g3': { x: 72, y: 15, name: '選手2', posName: '2/ライト' },
+            'g7': { x: 72, y: 68, name: '選手1', posName: '1/サーブ' },
+            'e7': { x: 44, y: 68, name: '選手6', posName: '6/バックセンター' },
+            'c7': { x: 18, y: 68, name: '選手5', posName: '5/バックレフト' },
+            'sub1': { name: '控え1', isSub: true },
+            'sub2': { name: '控え2', isSub: true },
+            'sub3': { name: '控え3', isSub: true },
+            'sub4': { name: '控え4', isSub: true },
+            'sub5': { name: '控え5', isSub: true },
+            'sub6': { name: '控え6', isSub: true }
         };
 
-        let state = {
-            players: JSON.parse(localStorage.getItem('vball_players')) || defaultState,
-            isSwapMode: false,
-            selectedSlotsForSwap: [],
-            activeModalSlot: null
+        // Tab state management for up to 6 tactics
+        let currentTab = 1;
+        let boardsData = JSON.parse(localStorage.getItem('vball_boards_v4')) || {
+            1: createEmptyBoardState(),
+            2: createEmptyBoardState(),
+            3: createEmptyBoardState(),
+            4: createEmptyBoardState(),
+            5: createEmptyBoardState(),
+            6: createEmptyBoardState()
         };
 
-        window.addEventListener('DOMContentLoaded', () => {
-            renderPlayers();
-            registerServiceWorker();
-        });
-
-        function saveToLocalStorage() {
-            localStorage.setItem('vball_players', JSON.stringify(state.players));
+        function createEmptyBoardState() {
+            return {
+                players: JSON.parse(JSON.stringify(defaultPositions)),
+                balls: [{ id: 1, x: 48, y: 25 }],
+                drawnPaths: []
+            };
         }
 
-        function renderPlayers() {
-            Object.keys(state.players).forEach(slotKey => {
-                const nameEl = document.getElementById(`name-${slotKey}`);
-                if (nameEl) {
-                    nameEl.textContent = state.players[slotKey] || '未登録';
+        let players = boardsData[currentTab].players;
+        let balls = boardsData[currentTab].balls;
+        let drawnPaths = boardsData[currentTab].drawnPaths;
+
+        let activeTool = 'select'; // 'select', 'pen', 'arrow', 'line', 'circle', 'eraser'
+        let currentColor = '#ef4444';
+        let strokeWidth = 4;
+
+        let canvas, ctx;
+        let isDrawing = false;
+        let startX = 0, startY = 0;
+        let tempPath = null;
+        let draggingHandle = null;
+
+        window.addEventListener('DOMContentLoaded', () => {
+            renderTabs();
+            initCanvas();
+            loadTabBoard(1);
+            window.addEventListener('resize', resizeCanvas);
+        });
+
+        /* --- STREAMING_CHUNK: Tactics Tab Switching Engine ... --- */
+        function renderTabs() {
+            const container = document.getElementById('tabs-container');
+            container.innerHTML = '';
+            for (let i = 1; i <= 6; i++) {
+                const btn = document.createElement('button');
+                btn.onclick = () => switchTab(i);
+                btn.className = `px-3 py-1 rounded-lg text-xs font-bold transition-all shrink-0 ${
+                    i === currentTab 
+                        ? 'bg-amber-500 text-slate-950 shadow-md scale-105' 
+                        : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                }`;
+                btn.innerText = `パターン ${i}`;
+                container.appendChild(btn);
+            }
+        }
+
+        function switchTab(tabIndex) {
+            // Save current board data
+            saveCurrentBoardState();
+
+            currentTab = tabIndex;
+            loadTabBoard(tabIndex);
+            renderTabs();
+            showToast(`作戦パターン ${tabIndex} に切り替えました`);
+        }
+
+        function loadTabBoard(tabIndex) {
+            if (!boardsData[tabIndex]) {
+                boardsData[tabIndex] = createEmptyBoardState();
+            }
+            players = boardsData[tabIndex].players;
+            balls = boardsData[tabIndex].balls;
+            drawnPaths = boardsData[tabIndex].drawnPaths;
+
+            renderPlayers();
+            renderBalls();
+            redrawCanvas();
+        }
+
+        function saveCurrentBoardState() {
+            boardsData[currentTab] = {
+                players: players,
+                balls: balls,
+                drawnPaths: drawnPaths
+            };
+            localStorage.setItem('vball_boards_v4', JSON.stringify(boardsData));
+        }
+
+        /* --- STREAMING_CHUNK: Canvas & Drawing Setup ... --- */
+        function initCanvas() {
+            canvas = document.getElementById('drawing-canvas');
+            ctx = canvas.getContext('2d');
+            resizeCanvas();
+
+            canvas.addEventListener('pointerdown', handlePointerDown);
+            canvas.addEventListener('pointermove', handlePointerMove);
+            canvas.addEventListener('pointerup', handlePointerUp);
+            canvas.addEventListener('pointercancel', handlePointerUp);
+        }
+
+        function resizeCanvas() {
+            const container = document.getElementById('court-container');
+            canvas.width = container.clientWidth;
+            canvas.height = container.clientHeight;
+            redrawCanvas();
+        }
+
+        function setTool(tool) {
+            activeTool = tool;
+            document.querySelectorAll('.tool-btn').forEach(btn => {
+                btn.classList.remove('bg-amber-500', 'text-slate-950');
+                btn.classList.add('bg-slate-700', 'text-slate-300');
+            });
+            const activeBtn = document.getElementById(`tool-${tool}`);
+            if (activeBtn) {
+                activeBtn.classList.remove('bg-slate-700', 'text-slate-300');
+                activeBtn.classList.add('bg-amber-500', 'text-slate-950');
+            }
+            canvas.style.pointerEvents = 'auto';
+            redrawCanvas();
+        }
+
+        function setLineWidth(width) {
+            strokeWidth = width;
+            document.querySelectorAll('.width-btn').forEach(btn => {
+                btn.classList.remove('bg-amber-500', 'text-slate-950');
+                btn.classList.add('bg-slate-700', 'text-slate-300');
+            });
+            const activeBtn = document.getElementById(`width-${width}`);
+            if (activeBtn) {
+                activeBtn.classList.remove('bg-slate-700', 'text-slate-300');
+                activeBtn.classList.add('bg-amber-500', 'text-slate-950');
+            }
+        }
+
+        function setColor(color) {
+            currentColor = color;
+            document.querySelectorAll('.color-btn').forEach(btn => btn.classList.remove('ring-2', 'ring-amber-400'));
+            
+            const colorMap = { '#000000': 'black', '#ef4444': 'red', '#3b82f6': 'blue', '#22c55e': 'green', '#eab308': 'yellow' };
+            const activeBtn = document.getElementById(`color-${colorMap[color]}`);
+            if (activeBtn) activeBtn.classList.add('ring-2', 'ring-amber-400');
+
+            showToast('描画色を変更しました');
+        }
+
+        function clearCanvas() {
+            drawnPaths = [];
+            saveCurrentBoardState();
+            redrawCanvas();
+            showToast('作戦描画を全消去しました');
+        }
+
+        function handlePointerDown(e) {
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+
+            if (activeTool === 'select') {
+                const handle = findHandleAt(x, y);
+                if (handle) {
+                    draggingHandle = handle;
+                    canvas.setPointerCapture(e.pointerId);
+                    return;
+                }
+            }
+
+            if (activeTool === 'eraser') {
+                erasePathOrShapeAt(x, y);
+                redrawCanvas();
+                saveCurrentBoardState();
+                return;
+            }
+
+            if (activeTool === 'select') return;
+
+            isDrawing = true;
+            startX = x;
+            startY = y;
+
+            if (activeTool === 'pen') {
+                tempPath = {
+                    tool: 'pen',
+                    color: currentColor,
+                    width: strokeWidth,
+                    points: [{ x: startX, y: startY }]
+                };
+            }
+        }
+
+        function handlePointerMove(e) {
+            const rect = canvas.getBoundingClientRect();
+            const currentX = e.clientX - rect.left;
+            const currentY = e.clientY - rect.top;
+
+            if (draggingHandle) {
+                const path = drawnPaths[draggingHandle.pathIndex];
+                if (draggingHandle.handleType === 'start') {
+                    path.startX = currentX;
+                    path.startY = currentY;
+                } else if (draggingHandle.handleType === 'end') {
+                    path.endX = currentX;
+                    path.endY = currentY;
+                }
+                redrawCanvas();
+                return;
+            }
+
+            if (!isDrawing) return;
+
+            if (activeTool === 'pen') {
+                tempPath.points.push({ x: currentX, y: currentY });
+                redrawCanvas();
+                drawSinglePath(tempPath);
+            } else if (['line', 'arrow', 'circle'].includes(activeTool)) {
+                redrawCanvas();
+                drawShapePreview(startX, startY, currentX, currentY, activeTool, currentColor, strokeWidth);
+            }
+        }
+
+        function handlePointerUp(e) {
+            if (draggingHandle) {
+                try { canvas.releasePointerCapture(e.pointerId); } catch(err){}
+                draggingHandle = null;
+                saveCurrentBoardState();
+                redrawCanvas();
+                return;
+            }
+
+            if (!isDrawing) return;
+            isDrawing = false;
+            const rect = canvas.getBoundingClientRect();
+            const endX = e.clientX - rect.left;
+            const endY = e.clientY - rect.top;
+
+            if (activeTool === 'pen') {
+                if (tempPath && tempPath.points.length > 1) {
+                    drawnPaths.push(tempPath);
+                }
+            } else if (['line', 'arrow', 'circle'].includes(activeTool)) {
+                if (Math.hypot(endX - startX, endY - startY) > 3) {
+                    drawnPaths.push({
+                        tool: activeTool,
+                        color: currentColor,
+                        width: strokeWidth,
+                        startX, startY, endX, endY
+                    });
+                }
+            }
+            tempPath = null;
+            saveCurrentBoardState();
+            redrawCanvas();
+        }
+
+        function findHandleAt(x, y) {
+            const handleRadius = 14;
+            for (let i = drawnPaths.length - 1; i >= 0; i--) {
+                const path = drawnPaths[i];
+                if (['line', 'arrow', 'circle'].includes(path.tool)) {
+                    if (Math.hypot(path.startX - x, path.startY - y) <= handleRadius) {
+                        return { pathIndex: i, handleType: 'start' };
+                    }
+                    if (Math.hypot(path.endX - x, path.endY - y) <= handleRadius) {
+                        return { pathIndex: i, handleType: 'end' };
+                    }
+                }
+            }
+            return null;
+        }
+
+        function erasePathOrShapeAt(x, y) {
+            const threshold = 16;
+            let erasedAny = false;
+
+            drawnPaths = drawnPaths.filter(path => {
+                if (erasedAny) return true;
+
+                if (path.tool === 'pen') {
+                    const hit = path.points.some(p => Math.hypot(p.x - x, p.y - y) < threshold);
+                    if (hit) erasedAny = true;
+                    return !hit;
+                } else if (['line', 'arrow'].includes(path.tool)) {
+                    const dist = distanceToSegment({x, y}, {x: path.startX, y: path.startY}, {x: path.endX, y: path.endY});
+                    if (dist < threshold) {
+                        erasedAny = true;
+                        return false;
+                    }
+                } else if (path.tool === 'circle') {
+                    const radius = Math.hypot(path.endX - path.startX, path.endY - path.startY);
+                    const distFromCenter = Math.hypot(x - path.startX, y - path.startY);
+                    if (Math.abs(distFromCenter - radius) < threshold || distFromCenter < threshold) {
+                        erasedAny = true;
+                        return false;
+                    }
+                }
+                return true;
+            });
+
+            if (erasedAny) {
+                showToast('図形/線を消去しました');
+            }
+        }
+
+        function distanceToSegment(p, v, w) {
+            const l2 = Math.hypot(v.x - w.x, v.y - w.y) ** 2;
+            if (l2 === 0) return Math.hypot(p.x - v.x, p.y - v.y);
+            let t = ((p.x - v.x) * (w.x - v.x) + (p.y - v.y) * (w.y - v.y)) / l2;
+            t = Math.max(0, Math.min(1, t));
+            return Math.hypot(p.x - (v.x + t * (w.x - v.x)), p.y - (v.y + t * (w.y - v.y)));
+        }
+
+        /* --- STREAMING_CHUNK: Canvas Path Rendering ... --- */
+        function redrawCanvas() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            drawnPaths.forEach((path) => {
+                drawSinglePath(path);
+                if (['line', 'arrow', 'circle'].includes(path.tool)) {
+                    drawShapeHandles(path);
                 }
             });
         }
 
-        // 1. Clockwise Rotation
-        function rotateClockwise() {
-            if (state.isSwapMode) exitSwapMode();
-
-            const p = state.players;
-            const tempC3 = p['c3'];
-            const tempE3 = p['e3'];
-            const tempG3 = p['g3'];
-            const tempG7 = p['g7'];
-            const tempE7 = p['e7'];
-            const tempC7 = p['c7'];
-
-            p['e3'] = tempC3;
-            p['g3'] = tempE3;
-            p['g7'] = tempG3;
-            p['e7'] = tempG7;
-            p['c7'] = tempE7;
-            p['c3'] = tempC7;
-
-            saveToLocalStorage();
-            renderPlayers();
-            showToast('🔄 ローテーション (時計回り)');
-        }
-
-        // 2. Counter-Clockwise Rotation
-        function rotateCounterClockwise() {
-            if (state.isSwapMode) exitSwapMode();
-
-            const p = state.players;
-            const tempC3 = p['c3'];
-            const tempE3 = p['e3'];
-            const tempG3 = p['g3'];
-            const tempG7 = p['g7'];
-            const tempE7 = p['e7'];
-            const tempC7 = p['c7'];
-
-            p['c7'] = tempC3;
-            p['e7'] = tempC7;
-            p['g7'] = tempE7;
-            p['g3'] = tempG7;
-            p['e3'] = tempG3;
-            p['c3'] = tempE3;
-
-            saveToLocalStorage();
-            renderPlayers();
-            showToast('↩️ 1つ戻す (反時計回り)');
-        }
-
-        // 3. Member Swap
-        function toggleSwapMode() {
-            state.isSwapMode = !state.isSwapMode;
-            state.selectedSlotsForSwap = [];
-            clearSlotHighlights();
-
-            const badge = document.getElementById('status-badge');
-            const swapBtn = document.getElementById('swap-mode-btn');
-
-            if (state.isSwapMode) {
-                badge.textContent = '交代: 1人目選択';
-                badge.className = 'text-xs font-bold px-2.5 py-1 rounded-full bg-amber-500 text-slate-950 animate-pulse';
-                swapBtn.classList.add('ring-4', 'ring-amber-300');
-                showToast('入れ替えたい枠を2つ選択してください');
+        function drawSinglePath(path) {
+            if (path.tool === 'pen') {
+                if (path.points.length < 2) return;
+                ctx.beginPath();
+                ctx.strokeStyle = path.color;
+                ctx.lineWidth = path.width;
+                ctx.lineCap = 'round';
+                ctx.lineJoin = 'round';
+                ctx.moveTo(path.points[0].x, path.points[0].y);
+                for (let i = 1; i < path.points.length; i++) {
+                    ctx.lineTo(path.points[i].x, path.points[i].y);
+                }
+                ctx.stroke();
             } else {
-                exitSwapMode();
+                drawShapePreview(path.startX, path.startY, path.endX, path.endY, path.tool, path.color, path.width);
             }
         }
 
-        function exitSwapMode() {
-            state.isSwapMode = false;
-            state.selectedSlotsForSwap = [];
-            clearSlotHighlights();
+        function drawShapePreview(sx, sy, ex, ey, tool, color = currentColor, width = strokeWidth) {
+            ctx.beginPath();
+            ctx.strokeStyle = color;
+            ctx.fillStyle = color;
+            ctx.lineWidth = width;
+            ctx.lineCap = 'round';
 
-            const badge = document.getElementById('status-badge');
-            const swapBtn = document.getElementById('swap-mode-btn');
-            badge.textContent = '通常モード';
-            badge.className = 'text-xs font-semibold px-2.5 py-1 rounded-full bg-slate-700 text-slate-300';
-            swapBtn.classList.remove('ring-4', 'ring-amber-300');
-        }
+            if (tool === 'line') {
+                ctx.moveTo(sx, sy);
+                ctx.lineTo(ex, ey);
+                ctx.stroke();
+            } else if (tool === 'arrow') {
+                ctx.moveTo(sx, sy);
+                ctx.lineTo(ex, ey);
+                ctx.stroke();
 
-        function handleSlotClick(slotKey) {
-            if (state.isSwapMode) {
-                handleSwapSelection(slotKey);
-            } else {
-                openNameModal(slotKey);
+                const angle = Math.atan2(ey - sy, ex - sx);
+                const headLen = Math.max(12, width * 2.5);
+                ctx.beginPath();
+                ctx.moveTo(ex, ey);
+                ctx.lineTo(ex - headLen * Math.cos(angle - Math.PI / 6), ey - headLen * Math.sin(angle - Math.PI / 6));
+                ctx.lineTo(ex - headLen * Math.cos(angle + Math.PI / 6), ey - headLen * Math.sin(angle + Math.PI / 6));
+                ctx.closePath();
+                ctx.fill();
+            } else if (tool === 'circle') {
+                const radius = Math.hypot(ex - sx, ey - sy);
+                ctx.arc(sx, sy, radius, 0, Math.PI * 2);
+                ctx.stroke();
             }
         }
 
-        function handleSwapSelection(slotKey) {
-            if (state.selectedSlotsForSwap.includes(slotKey)) return;
+        function drawShapeHandles(path) {
+            const handleRadius = Math.max(6, path.width + 3);
 
-            state.selectedSlotsForSwap.push(slotKey);
-            highlightSlot(slotKey);
+            ctx.beginPath();
+            ctx.arc(path.startX, path.startY, handleRadius, 0, Math.PI * 2);
+            ctx.fillStyle = path.color;
+            ctx.fill();
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 1.5;
+            ctx.stroke();
 
-            const badge = document.getElementById('status-badge');
+            ctx.beginPath();
+            ctx.arc(path.endX, path.endY, handleRadius, 0, Math.PI * 2);
+            ctx.fillStyle = path.color;
+            ctx.fill();
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 1.5;
+            ctx.stroke();
+        }
 
-            if (state.selectedSlotsForSwap.length === 1) {
-                badge.textContent = '交代: 2人目選択';
-            } else if (state.selectedSlotsForSwap.length === 2) {
-                const [slotA, slotB] = state.selectedSlotsForSwap;
+        /* --- STREAMING_CHUNK: Player & Ball Rendering Engine ... --- */
+        function renderPlayers() {
+            const playersLayer = document.getElementById('players-layer');
+            const subBench = document.getElementById('sub-bench');
+            
+            playersLayer.innerHTML = '';
+            subBench.innerHTML = '';
+
+            Object.keys(players).forEach(key => {
+                const p = players[key];
+                const token = document.createElement('div');
+                token.id = `player-${key}`;
                 
-                const temp = state.players[slotA];
-                state.players[slotA] = state.players[slotB];
-                state.players[slotB] = temp;
+                token.className = `player-token absolute pointer-events-auto rounded-xl px-2 py-1 flex flex-col items-center justify-center shadow-lg border-2 ${
+                    p.isSub ? 'bg-slate-800 border-slate-600 text-slate-200' : 'bg-slate-900/95 border-amber-400 text-white'
+                }`;
 
-                saveToLocalStorage();
-                renderPlayers();
-                showToast(`🔁 ${state.players[slotB]} ↔️ ${state.players[slotA]} 交代完了`);
-                
-                setTimeout(() => exitSwapMode(), 300);
-            }
-        }
+                token.style.width = '130px'; 
+                token.style.height = '54px'; 
 
-        function highlightSlot(slotKey) {
-            const slotEl = document.getElementById(`slot-${slotKey}`);
-            if (slotEl) {
-                slotEl.classList.add('ring-4', 'ring-amber-400', 'bg-amber-900/50');
-            }
-        }
+                token.innerHTML = `
+                    <span class="text-[9px] md:text-[10px] text-amber-300 font-bold leading-tight pointer-events-none">${p.posName || '控え'}</span>
+                    <span class="text-xs md:text-sm font-bold text-center break-all line-clamp-1 pointer-events-none mt-0.5">${p.name}</span>
+                `;
 
-        function clearSlotHighlights() {
-            document.querySelectorAll('.court-slot').forEach(el => {
-                el.classList.remove('ring-4', 'ring-amber-400', 'bg-amber-900/50');
+                if (!p.isSub) {
+                    token.style.left = `${p.x}%`;
+                    token.style.top = `${p.y}%`;
+                    playersLayer.appendChild(token);
+                } else {
+                    token.classList.remove('absolute');
+                    token.style.width = '100%';
+                    token.style.height = '42px';
+                    subBench.appendChild(token);
+                }
+
+                setupTokenDragAndClick(token, key);
             });
         }
 
-        // Modal Handlers
-        function openNameModal(slotKey) {
-            state.activeModalSlot = slotKey;
+        function setupTokenDragAndClick(token, key) {
+            let isDragging = false;
+            let startX, startY;
+
+            token.addEventListener('pointerdown', (e) => {
+                if (activeTool !== 'select') return;
+                isDragging = false;
+                startX = e.clientX;
+                startY = e.clientY;
+
+                token.setPointerCapture(e.pointerId);
+                token.classList.add('dragging');
+
+                const onPointerMove = (moveEv) => {
+                    const dx = moveEv.clientX - startX;
+                    const dy = moveEv.clientY - startY;
+
+                    if (Math.hypot(dx, dy) > 4) {
+                        isDragging = true;
+                    }
+
+                    if (isDragging) {
+                        const container = document.getElementById('court-container').getBoundingClientRect();
+                        let newX = ((moveEv.clientX - container.left - 65) / container.width) * 100;
+                        let newY = ((moveEv.clientY - container.top - 27) / container.height) * 100;
+
+                        token.style.left = `${Math.max(0, Math.min(85, newX))}%`;
+                        token.style.top = `${Math.max(0, Math.min(88, newY))}%`;
+                    }
+                };
+
+                const onPointerUp = (upEv) => {
+                    try { token.releasePointerCapture(upEv.pointerId); } catch(err){}
+                    token.classList.remove('dragging');
+                    token.removeEventListener('pointermove', onPointerMove);
+                    token.removeEventListener('pointerup', onPointerUp);
+
+                    if (!isDragging) {
+                        openNameModal(key);
+                    } else {
+                        players[key].x = parseFloat(token.style.left);
+                        players[key].y = parseFloat(token.style.top);
+                        saveCurrentBoardState();
+                    }
+                };
+
+                token.addEventListener('pointermove', onPointerMove);
+                token.addEventListener('pointerup', onPointerUp);
+            });
+        }
+
+        function addBall() {
+            const ballId = Date.now();
+            balls.push({ id: ballId, x: 48 + (balls.length * 2) % 20, y: 30 });
+            renderBalls();
+            saveCurrentBoardState();
+            showToast('🏐 ボールを追加しました');
+        }
+
+        function renderBalls() {
+            const ballsLayer = document.getElementById('balls-layer');
+            ballsLayer.innerHTML = '';
+
+            balls.forEach((ball, index) => {
+                const token = document.createElement('div');
+                token.id = `ball-${ball.id}`;
+                token.className = 'ball-token absolute w-8 h-8 md:w-9 md:h-9 rounded-full bg-amber-400 border-2 border-white shadow-lg flex items-center justify-center text-base md:text-lg font-bold cursor-grab select-none pointer-events-auto';
+                token.innerText = '🏐';
+                token.style.left = `${ball.x}%`;
+                token.style.top = `${ball.y}%`;
+
+                setupBallDragAndEraser(token, ball.id, index);
+                ballsLayer.appendChild(token);
+            });
+        }
+
+        function setupBallDragAndEraser(token, ballId, index) {
+            token.addEventListener('pointerdown', (e) => {
+                if (activeTool === 'eraser') {
+                    balls.splice(index, 1);
+                    renderBalls();
+                    saveCurrentBoardState();
+                    showToast('ボールを削除しました');
+                    return;
+                }
+
+                token.setPointerCapture(e.pointerId);
+
+                const ball = balls.find(b => b.id === ballId);
+
+                const onMove = (moveEv) => {
+                    const container = document.getElementById('court-container').getBoundingClientRect();
+                    let newX = ((moveEv.clientX - container.left - 18) / container.width) * 100;
+                    let newY = ((moveEv.clientY - container.top - 18) / container.height) * 100;
+
+                    ball.x = Math.max(0, Math.min(95, newX));
+                    ball.y = Math.max(0, Math.min(95, newY));
+                    token.style.left = `${ball.x}%`;
+                    token.style.top = `${ball.y}%`;
+                };
+
+                const onUp = (upEv) => {
+                    try { token.releasePointerCapture(upEv.pointerId); } catch(err){}
+                    token.removeEventListener('pointermove', onMove);
+                    token.removeEventListener('pointerup', onUp);
+                    saveCurrentBoardState();
+                };
+
+                token.addEventListener('pointermove', onMove);
+                token.addEventListener('pointerup', onUp);
+            });
+        }
+
+        /* --- STREAMING_CHUNK: Rotation and Modal Handlers ... --- */
+        function rotateClockwise() {
+            const courtKeys = ['c3', 'e3', 'g3', 'g7', 'e7', 'c7'];
+            const tempNames = courtKeys.map(k => players[k].name);
+
+            players['e3'].name = tempNames[0];
+            players['g3'].name = tempNames[1];
+            players['g7'].name = tempNames[2];
+            players['e7'].name = tempNames[3];
+            players['c7'].name = tempNames[4];
+            players['c3'].name = tempNames[5];
+
+            resetPlayerPositions();
+            showToast('🔄 ローテーション (時計回り)');
+        }
+
+        function rotateCounterClockwise() {
+            const courtKeys = ['c3', 'e3', 'g3', 'g7', 'e7', 'c7'];
+            const tempNames = courtKeys.map(k => players[k].name);
+
+            players['c7'].name = tempNames[0];
+            players['e7'].name = tempNames[5];
+            players['g7'].name = tempNames[4];
+            players['g3'].name = tempNames[3];
+            players['e3'].name = tempNames[2];
+            players['c3'].name = tempNames[1];
+
+            resetPlayerPositions();
+            showToast('↩️ 1つ戻す (反時計回り)');
+        }
+
+        function resetPlayerPositions() {
+            Object.keys(defaultPositions).forEach(k => {
+                if (!players[k].isSub) {
+                    players[k].x = defaultPositions[k].x;
+                    players[k].y = defaultPositions[k].y;
+                }
+            });
+            saveCurrentBoardState();
+            renderPlayers();
+        }
+
+        let activeEditKey = null;
+        function openNameModal(key) {
+            activeEditKey = key;
             const input = document.getElementById('player-name-input');
-            const label = document.getElementById('modal-slot-label');
-            
-            label.textContent = `枠の場所: ${getSlotDisplayName(slotKey)}`;
-            input.value = state.players[slotKey] || '';
-            
+            input.value = players[key].name;
             const modal = document.getElementById('name-modal');
             modal.classList.remove('hidden');
             modal.classList.add('flex');
-            
             setTimeout(() => input.focus(), 100);
         }
 
         function closeNameModal() {
-            const modal = document.getElementById('name-modal');
-            modal.classList.add('hidden');
-            modal.classList.remove('flex');
-            state.activeModalSlot = null;
+            document.getElementById('name-modal').classList.add('hidden');
+            activeEditKey = null;
         }
 
         function savePlayerName() {
-            if (!state.activeModalSlot) return;
+            if (!activeEditKey) return;
             const input = document.getElementById('player-name-input');
-            state.players[state.activeModalSlot] = input.value.trim() || '未設定';
-            saveToLocalStorage();
+            players[activeEditKey].name = input.value.trim() || '未設定';
+            saveCurrentBoardState();
             renderPlayers();
             closeNameModal();
             showToast('名前を更新しました');
-        }
-
-        function getSlotDisplayName(key) {
-            const names = {
-                'c3': 'コート (4 / レフト)',
-                'e3': 'コート (3 / センター)',
-                'g3': 'コート (2 / ライト)',
-                'g7': 'コート (1 / バックライト)',
-                'e7': 'コート (6 / バックセンター)',
-                'c7': 'コート (5 / バックレフト)',
-                'sub1': '控え 1',
-                'sub2': '控え 2',
-                'sub3': '控え 3',
-                'sub4': '控え 4'
-            };
-            return names[key] || key;
         }
 
         let toastTimeout;
@@ -432,37 +860,6 @@
                 toast.classList.remove('opacity-100', 'translate-y-0');
                 toast.classList.add('opacity-0', 'translate-y-4');
             }, 2000);
-        }
-
-        function registerServiceWorker() {
-            if ('serviceWorker' in navigator) {
-                const swCode = `
-                    const CACHE_NAME = 'vball-app-v1';
-                    self.addEventListener('install', (e) => {
-                        e.waitUntil(
-                            caches.open(CACHE_NAME).then((cache) => {
-                                return cache.addAll([
-                                    './',
-                                    'https://cdn.tailwindcss.com',
-                                    'https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap'
-                                ]).catch(() => {});
-                            })
-                        );
-                        self.skipWaiting();
-                    });
-                    self.addEventListener('fetch', (e) => {
-                        e.respondWith(
-                            caches.match(e.request).then((res) => res || fetch(e.request))
-                        );
-                    });
-                `;
-                const blob = new Blob([swCode], { type: 'application/javascript' });
-                const blobURL = URL.createObjectURL(blob);
-
-                navigator.serviceWorker.register(blobURL)
-                    .then(() => console.log('Offline capability registered'))
-                    .catch(() => {});
-            }
         }
     </script>
 </body>
